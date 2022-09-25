@@ -9,6 +9,7 @@
 #include <vk_types.h>
 #include <vk_initializers.h>
 
+#include "SDL_keycode.h"
 #include "VkBootstrap.h"
 
 //we want to immediately abort when there is an error. In normal engines this would give an error message to the user, or perform a dump of state.
@@ -132,7 +133,7 @@ void VulkanEngine::draw()
 
     vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _trianglePipeline);
+    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, useColoredTrianglePipeline ? _coloredTrianglePipeline : _trianglePipeline);
     vkCmdDraw(cmd, 3, 1, 0, 0);
 
     //finalize the render pass
@@ -202,6 +203,8 @@ void VulkanEngine::run()
                  bQuit = true;
             } else if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE) {
                  bQuit = true;
+            } else if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_SPACE) {
+                 useColoredTrianglePipeline = !useColoredTrianglePipeline;
             }
 		}
 
@@ -488,6 +491,16 @@ void VulkanEngine::init_pipelines()
 
     //finally build the pipeline
     _trianglePipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
+
+    const VkShaderModule coloredTriangleFragShader = loadShader("colored_triangle.frag.spv");
+    const VkShaderModule coloredTriangleVertexShader = loadShader("colored_triangle.vert.spv");
+    pipelineBuilder._shaderStages.clear();
+    pipelineBuilder._shaderStages.push_back(
+        vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, coloredTriangleVertexShader));
+
+    pipelineBuilder._shaderStages.push_back(
+        vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, coloredTriangleFragShader));
+    _coloredTrianglePipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
 }
 
 VkPipeline PipelineBuilder::build_pipeline(VkDevice device, VkRenderPass pass)

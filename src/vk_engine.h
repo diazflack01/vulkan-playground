@@ -76,6 +76,9 @@ public:
 
     VkPipelineLayout _trianglePipelineLayout;
     VkPipeline _trianglePipeline;
+	VkPipeline _coloredTrianglePipeline;
+
+	bool useColoredTrianglePipeline{false};
 
 private:
 
