@@ -9,6 +9,9 @@
 
 #include <vk_types.h>
 
+#include <vk_mem_alloc.h>
+#include <vk_mesh.h>
+
 struct DeletionQueue
 {
 	std::deque<std::function<void()>> deletors;
@@ -103,6 +106,11 @@ public:
 
 	DeletionQueue _mainDeletionQueue;
 
+	VmaAllocator _allocator;
+
+	VkPipeline _meshPipeline;
+	Mesh _triangleMesh;
+
 private:
 
 	void init_vulkan();
@@ -120,4 +128,8 @@ private:
 	bool load_shader_module(const char* filePath, VkShaderModule* outShaderModule);
 
     void init_pipelines();
+
+	void load_meshes();
+
+	void upload_mesh(Mesh& mesh);
 };
