@@ -84,7 +84,11 @@ void VulkanEngine::run()
 		while (SDL_PollEvent(&e) != 0)
 		{
 			//close the window when user alt-f4s or clicks the X button			
-			if (e.type == SDL_QUIT) bQuit = true;
+            if (e.type == SDL_QUIT) {
+                 bQuit = true;
+            } else if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE) {
+                 bQuit = true;
+            }
 		}
 
 		draw();
