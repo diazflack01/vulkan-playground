@@ -4,7 +4,28 @@
 #pragma once
 
 #include <vector>
+#include <functional>
+#include <deque>
+
 #include <vk_types.h>
+
+struct DeletionQueue
+{
+	std::deque<std::function<void()>> deletors;
+
+	void push_function(std::function<void()>&& function) {
+		deletors.push_back(function);
+	}
+
+	void flush() {
+		// reverse iterate the deletion queue to execute all the functions
+		for (auto it = deletors.rbegin(); it != deletors.rend(); it++) {
+			(*it)(); //call the function
+		}
+
+		deletors.clear();
+	}
+};
 
 class PipelineBuilder {
 public:
@@ -79,6 +100,8 @@ public:
 	VkPipeline _coloredTrianglePipeline;
 
 	bool useColoredTrianglePipeline{false};
+
+	DeletionQueue _mainDeletionQueue;
 
 private:
 
