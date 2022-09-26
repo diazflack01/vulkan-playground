@@ -143,22 +143,8 @@ void VulkanEngine::draw()
     //we want to wait on the _presentSemaphore, as that semaphore is signaled when the swapchain is ready
     //we will signal the _renderSemaphore, to signal that rendering has finished
 
-    VkSubmitInfo submit = {};
-    submit.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submit.pNext = nullptr;
-
-    VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-
-    submit.pWaitDstStageMask = &waitStage;
-
-    submit.waitSemaphoreCount = 1;
-    submit.pWaitSemaphores = &_presentSemaphore;
-
-    submit.signalSemaphoreCount = 1;
-    submit.pSignalSemaphores = &_renderSemaphore;
-
-    submit.commandBufferCount = 1;
-    submit.pCommandBuffers = &cmd;
+    const VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    const VkSubmitInfo submit = vkinit::submit_info(cmd, _presentSemaphore, _renderSemaphore, waitStage);
 
     //submit command buffer to the queue and execute it.
     // _renderFence will now block until the graphic commands finish execution
@@ -167,17 +153,7 @@ void VulkanEngine::draw()
     // this will put the image we just rendered into the visible window.
     // we want to wait on the _renderSemaphore for that,
     // as it's necessary that drawing commands have finished before the image is displayed to the user
-    VkPresentInfoKHR presentInfo = {};
-    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-    presentInfo.pNext = nullptr;
-
-    presentInfo.pSwapchains = &_swapchain;
-    presentInfo.swapchainCount = 1;
-
-    presentInfo.pWaitSemaphores = &_renderSemaphore;
-    presentInfo.waitSemaphoreCount = 1;
-
-    presentInfo.pImageIndices = &swapchainImageIndex;
+    const VkPresentInfoKHR presentInfo = vkinit::present_info(_swapchain, _renderSemaphore, &swapchainImageIndex);
 
     VK_CHECK(vkQueuePresentKHR(_graphicsQueue, &presentInfo));
 
@@ -743,8 +719,16 @@ void VulkanEngine::load_meshes() {
 	_monkeyMesh.load_from_obj("../assets/monkey_smooth.obj");
     upload_mesh(_monkeyMesh);
 
+    _wolfMesh.load_from_obj("../assets/wolf/Wolf_One_obj.obj");
+    upload_mesh(_wolfMesh);
+
+    _maleHumanMesh.load_from_obj("../assets/FinalBaseMesh.obj");
+    upload_mesh(_maleHumanMesh);
+
     //note that we are copying them. Eventually we will delete the hardcoded _monkey and _triangle meshes, so it's no problem now.
 	_meshes["monkey"] = _monkeyMesh;
+    _meshes["wolf"] = _wolfMesh;
+    _meshes["maleHuman"] = _maleHumanMesh;
 	_meshes["triangle"] = _triangleMesh;
 }
 
@@ -871,6 +855,20 @@ void VulkanEngine::init_scene() {
 	monkey.transformMatrix = glm::mat4{ 1.0f };
 
 	_renderables.push_back(monkey);
+
+    RenderObject wolf;
+	wolf.mesh = get_mesh("wolf");
+	wolf.material = get_material("defaultmesh");
+	wolf.transformMatrix = glm::translate(glm::scale(glm::mat4{ 1.0f }, glm::vec3{3.0f, 3.0f, 3.0f}), glm::vec3{-1.f, 3.0f, 0.0f});
+
+	_renderables.push_back(wolf);
+
+    RenderObject maleHuman;
+	maleHuman.mesh = get_mesh("maleHuman");
+	maleHuman.material = get_material("defaultmesh");
+	maleHuman.transformMatrix = glm::translate(glm::scale(glm::mat4{ 1.0f }, glm::vec3{0.3f, 0.3f, 0.3f}), glm::vec3{10.f, 3.0f, 0.0f});
+
+	_renderables.push_back(maleHuman);
 
 	for (int x = -20; x <= 20; x++) {
 		for (int y = -20; y <= 20; y++) {

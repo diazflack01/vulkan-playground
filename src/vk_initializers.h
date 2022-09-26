@@ -40,5 +40,9 @@ VkPipelineDepthStencilStateCreateInfo depth_stencil_create_info(bool bDepthTest,
 
 VkRenderPassBeginInfo renderpass_begin_info(VkRenderPass renderPass, VkExtent2D windowExtent2D, VkFramebuffer frameBuffer, const std::vector<VkClearValue>& clearValues = {});
 
+VkSubmitInfo submit_info(const VkCommandBuffer& commandBuffer, const VkSemaphore& waitSemaphore, const VkSemaphore& signalSemaphore, const VkPipelineStageFlags& waitStageFlags);
+
+VkPresentInfoKHR present_info(const VkSwapchainKHR& swapchain, const VkSemaphore& waitSemaphore, const uint32_t* imageIndices);
+
 }
 

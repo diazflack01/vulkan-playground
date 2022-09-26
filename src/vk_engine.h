@@ -135,6 +135,8 @@ public:
 	VkPipelineLayout _meshPipelineLayout;
 
 	Mesh _monkeyMesh;
+	Mesh _wolfMesh;
+	Mesh _maleHumanMesh;
 
 	VkImageView _depthImageView;
 	AllocatedImage _depthImage;
@@ -149,7 +151,6 @@ public:
 	std::unordered_map<std::string,Mesh> _meshes;
 
 private:
-
 	void init_vulkan();
 
     void init_swapchain();

@@ -212,3 +212,38 @@ VkRenderPassBeginInfo vkinit::renderpass_begin_info(VkRenderPass renderPass, VkE
 
     return rpInfo;
 }
+
+VkSubmitInfo vkinit::submit_info(const VkCommandBuffer& commandBuffer, const VkSemaphore& waitSemaphore, const VkSemaphore& signalSemaphore, const VkPipelineStageFlags& waitStageFlags) {
+    VkSubmitInfo submit = {};
+    submit.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit.pNext = nullptr;
+
+    submit.pWaitDstStageMask = &waitStageFlags;
+
+    submit.waitSemaphoreCount = 1;
+    submit.pWaitSemaphores = &waitSemaphore;
+
+    submit.signalSemaphoreCount = 1;
+    submit.pSignalSemaphores = &signalSemaphore;
+
+    submit.commandBufferCount = 1;
+    submit.pCommandBuffers = &commandBuffer;
+
+    return submit;
+}
+
+VkPresentInfoKHR vkinit::present_info(const VkSwapchainKHR& swapchain, const VkSemaphore& waitSemaphore, const uint32_t* imageIndices) {
+    VkPresentInfoKHR presentInfo = {};
+    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    presentInfo.pNext = nullptr;
+
+    presentInfo.pSwapchains = &swapchain;
+    presentInfo.swapchainCount = 1;
+
+    presentInfo.pWaitSemaphores = &waitSemaphore;
+    presentInfo.waitSemaphoreCount = 1;
+
+    presentInfo.pImageIndices = imageIndices;
+
+    return presentInfo;
+}
