@@ -14,6 +14,16 @@
 #include <vk_mesh.h>
 #include <glm/glm.hpp>
 
+// Per frame context
+struct Frame {
+	VkCommandPool _commandPool;
+    VkCommandBuffer _mainCommandBuffer;
+
+	VkFence _renderFence;
+	VkSemaphore _presentSemaphore;
+	VkSemaphore _renderSemaphore;
+};
+
 struct Material {
 	VkPipeline pipeline;
 	VkPipelineLayout pipelineLayout;
@@ -71,7 +81,7 @@ class VulkanEngine {
 public:
 
 	bool _isInitialized{ false };
-	int _frameNumber {0};
+	size_t _frameNumber {0};
 
 	VkExtent2D _windowExtent{ 1700 , 900 };
 
@@ -116,8 +126,6 @@ public:
 
     std::vector<VkFramebuffer> _framebuffers;
 
-    VkSemaphore _presentSemaphore, _renderSemaphore;
-    VkFence _renderFence;
 
     VkPipelineLayout _trianglePipelineLayout;
     VkPipeline _trianglePipeline;
@@ -151,6 +159,10 @@ public:
 	std::unordered_map<std::string,Mesh> _meshes;
 
 	glm::vec3 _camPos{0.0f, -6.f, -10.0f};
+
+	// Double buffering
+	static constexpr size_t FRAME_OVERLAP = 2;
+	std::array<Frame, FRAME_OVERLAP> _frames;
 
 private:
 	void init_vulkan();
@@ -186,4 +198,6 @@ private:
 	void draw_objects(VkCommandBuffer cmd,RenderObject* first, int count);
 
 	void init_scene();
+
+	Frame& get_current_frame();
 };
