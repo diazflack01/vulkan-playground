@@ -13,6 +13,7 @@
 #include <glm/gtx/transform.hpp>
 #include <vulkan/vulkan_core.h>
 
+#include "SDL_events.h"
 #include "SDL_keycode.h"
 #include "VkBootstrap.h"
 
@@ -104,12 +105,7 @@ void VulkanEngine::draw()
     VkCommandBuffer cmd = _mainCommandBuffer;
 
     //begin the command buffer recording. We will use this command buffer exactly once, so we want to let Vulkan know that
-    VkCommandBufferBeginInfo cmdBeginInfo = {};
-    cmdBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    cmdBeginInfo.pNext = nullptr;
-
-    cmdBeginInfo.pInheritanceInfo = nullptr;
-    cmdBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    const VkCommandBufferBeginInfo cmdBeginInfo = vkinit::command_buffer_begin_info(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
     VK_CHECK(vkBeginCommandBuffer(cmd, &cmdBeginInfo));
 
@@ -179,6 +175,33 @@ void VulkanEngine::run()
                  bQuit = true;
             } else if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_SPACE) {
                  useColoredTrianglePipeline = !useColoredTrianglePipeline;
+            } else if (e.type == SDL_KEYDOWN) {
+                switch (e.key.keysym.sym) {
+                    case SDLK_ESCAPE:
+                        bQuit = true;
+                        break;
+                    case SDLK_SPACE:
+                        useColoredTrianglePipeline = !useColoredTrianglePipeline;
+                        break;
+                    case SDLK_w:
+                        std::cout << "SDL_KEYDOWN w" << std::endl;
+                        _camPos += glm::vec3{0.0f, 0.0f, 1.0f};
+                        break;
+                    case SDLK_a:
+                        std::cout << "SDL_KEYDOWN a" << std::endl;
+                        _camPos += glm::vec3{+1.0f, 0.0f, 0.0f};
+                        break;
+                    case SDLK_s:
+                        std::cout << "SDL_KEYDOWN s" << std::endl;
+                        _camPos += glm::vec3{0.0f, 0.0f, -1.0f};
+                        break;
+                    case SDLK_d:
+                        std::cout << "SDL_KEYDOWN d" << std::endl;
+                        _camPos += glm::vec3{-1.0f, 0.0f, 0.0f};
+                        break;
+                    default:
+                        break;
+                }
             }
 		}
 
@@ -803,11 +826,9 @@ Mesh* VulkanEngine::get_mesh(const std::string& name)
 
 void VulkanEngine::draw_objects(VkCommandBuffer cmd,RenderObject* first, int count)
 {
-	//make a model view matrix for rendering the object
 	//camera view
-	glm::vec3 camPos = { 0.f,-6.f,-10.f };
+	glm::mat4 view = glm::translate(glm::mat4(1.f), _camPos);
 
-	glm::mat4 view = glm::translate(glm::mat4(1.f), camPos);
 	//camera projection
 	glm::mat4 projection = glm::perspective(glm::radians(70.f), 1700.f / 900.f, 0.1f, 200.0f);
 	projection[1][1] *= -1;

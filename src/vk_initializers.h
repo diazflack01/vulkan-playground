@@ -44,5 +44,7 @@ VkSubmitInfo submit_info(const VkCommandBuffer& commandBuffer, const VkSemaphore
 
 VkPresentInfoKHR present_info(const VkSwapchainKHR& swapchain, const VkSemaphore& waitSemaphore, const uint32_t* imageIndices);
 
+VkCommandBufferBeginInfo command_buffer_begin_info(VkCommandBufferUsageFlags flags);
+
 }
 

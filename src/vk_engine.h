@@ -150,6 +150,8 @@ public:
 	std::unordered_map<std::string,Material> _materials;
 	std::unordered_map<std::string,Mesh> _meshes;
 
+	glm::vec3 _camPos{0.0f, -6.f, -10.0f};
+
 private:
 	void init_vulkan();
 

@@ -247,3 +247,13 @@ VkPresentInfoKHR vkinit::present_info(const VkSwapchainKHR& swapchain, const VkS
 
     return presentInfo;
 }
+
+VkCommandBufferBeginInfo vkinit::command_buffer_begin_info(VkCommandBufferUsageFlags flags) {
+    VkCommandBufferBeginInfo cmdBeginInfo = {};
+    cmdBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    cmdBeginInfo.pNext = nullptr;
+
+    cmdBeginInfo.pInheritanceInfo = nullptr;
+    cmdBeginInfo.flags = flags;
+    return cmdBeginInfo;
+}
