@@ -645,6 +645,8 @@ void VulkanEngine::init_pipelines()
 
     create_material(_meshPipeline, _meshPipelineLayout, "defaultmesh");
 
+    create_material(_meshPipeline, _meshPipelineLayout, "defaultmesh_duplicate");
+
     // delete vulkan shaders
     vkDestroyShaderModule(_device, triangleFragShader, nullptr);
     vkDestroyShaderModule(_device, triangleVertexShader, nullptr);
@@ -835,13 +837,15 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd,RenderObject* first, int cou
 
 	Mesh* lastMesh = nullptr;
 	Material* lastMaterial = nullptr;
+    size_t pipelineBindCount = 0;
+    size_t vertexBuffersBindCount = 0;
 	for (int i = 0; i < count; i++)
 	{
 		RenderObject& object = first[i];
 
 		//only bind the pipeline if it doesn't match with the already bound one
 		if (object.material != lastMaterial) {
-
+            ++pipelineBindCount;
 			vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline);
 			lastMaterial = object.material;
 		}
@@ -859,6 +863,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd,RenderObject* first, int cou
 
 		//only bind the mesh if it's a different one from last bind
 		if (object.mesh != lastMesh) {
+            ++vertexBuffersBindCount;
 			//bind the mesh vertex buffer with offset 0
 			VkDeviceSize offset = 0;
 			vkCmdBindVertexBuffers(cmd, 0, 1, &object.mesh->_vertexBuffer._buffer, &offset);
@@ -867,6 +872,7 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd,RenderObject* first, int cou
 		//we can now draw
 		vkCmdDraw(cmd, object.mesh->_vertices.size(), 1, 0, 0);
 	}
+    std::cout << "Total Bind Count Pipeline: " << pipelineBindCount << " , Vertex Buffers:" << vertexBuffersBindCount << std::endl; 
 }
 
 void VulkanEngine::init_scene() {
@@ -896,7 +902,7 @@ void VulkanEngine::init_scene() {
 
 			RenderObject tri;
 			tri.mesh = get_mesh("triangle");
-			tri.material = get_material("defaultmesh");
+			tri.material = get_material(y%2 == 0 ? "defaultmesh_duplicate" : "defaultmesh");
 			glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(x, 0, y));
 			glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(0.2, 0.2, 0.2));
 			tri.transformMatrix = translation * scale;
@@ -904,4 +910,13 @@ void VulkanEngine::init_scene() {
 			_renderables.push_back(tri);
 		}
 	}
+
+    auto sortComparator = [](const RenderObject& l, const RenderObject& r){
+        if (l.material == r.material) {
+            return l.mesh < r.mesh;
+        }
+        return l.material < r.material;
+    };
+
+    std::sort(_renderables.begin(), _renderables.end(), sortComparator);
 }
