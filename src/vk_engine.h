@@ -14,14 +14,25 @@
 #include <vk_mesh.h>
 #include <glm/glm.hpp>
 
-// Per frame context
-struct Frame {
-	VkCommandPool _commandPool;
-    VkCommandBuffer _mainCommandBuffer;
+struct GPUCameraData {
+	glm::mat4 view;
+	glm::mat4 proj;
+	glm::mat4 viewproj;
+};
 
-	VkFence _renderFence;
-	VkSemaphore _presentSemaphore;
-	VkSemaphore _renderSemaphore;
+// Per frame context
+struct FrameData {
+	VkCommandPool commandPool;
+    VkCommandBuffer mainCommandBuffer;
+
+	VkFence renderFence;
+	VkSemaphore presentSemaphore;
+	VkSemaphore renderSemaphore;
+
+	//buffer that holds a single GPUCameraData to use when rendering
+	AllocatedBuffer cameraBuffer;
+
+	VkDescriptorSet globalDescriptor;
 };
 
 struct Material {
@@ -162,7 +173,10 @@ public:
 
 	// Double buffering
 	static constexpr size_t FRAME_OVERLAP = 2;
-	std::array<Frame, FRAME_OVERLAP> _frames;
+	std::array<FrameData, FRAME_OVERLAP> _frames;
+
+	VkDescriptorSetLayout _globalSetLayout;
+	VkDescriptorPool _descriptorPool;
 
 private:
 	void init_vulkan();
@@ -199,5 +213,9 @@ private:
 
 	void init_scene();
 
-	Frame& get_current_frame();
+	FrameData& get_current_frame();
+
+	AllocatedBuffer create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
+
+	void init_descriptors();
 };
