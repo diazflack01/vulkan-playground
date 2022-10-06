@@ -671,6 +671,7 @@ void VulkanEngine::init_pipelines()
     vkDestroyShaderModule(_device, coloredTriangleFragShader, nullptr);
     vkDestroyShaderModule(_device, coloredTriangleVertexShader, nullptr);
     vkDestroyShaderModule(_device, triangleMeshVertexShader, nullptr);
+    vkDestroyShaderModule(_device, defaultLitFragShader, nullptr);
 
     _mainDeletionQueue.push_function([=]() {
 		//destroy the 2 pipelines we have created
@@ -898,8 +899,11 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd,RenderObject* first, int cou
 			vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline);
 			lastMaterial = object.material;
 
+            // offset scene buffer
+            const uint32_t uniform_offset = pad_uniform_buffer_size(sizeof(GPUSceneData)) * frameIndex;
+
             //bind the descriptor set when changing pipeline
-        	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 0, 1, &get_current_frame().globalDescriptor, 0, nullptr);
+        	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 0, 1, &get_current_frame().globalDescriptor, 1, &uniform_offset);
 		}
 
 		MeshPushConstants constants;
@@ -999,10 +1003,10 @@ AllocatedBuffer VulkanEngine::create_buffer(size_t allocSize, VkBufferUsageFlags
 
 void VulkanEngine::init_descriptors()
 {
-    //create a descriptor pool that will hold 10 uniform buffers
 	std::vector<VkDescriptorPoolSize> sizes =
 	{
-		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10 }
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10 },
+        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 10 }
 	};
 
     VkDescriptorPoolCreateInfo pool_info = {};
@@ -1018,7 +1022,7 @@ void VulkanEngine::init_descriptors()
 	const VkDescriptorSetLayoutBinding camBufferBinding = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0);
 
     //binding for scene data at 1
-    const VkDescriptorSetLayoutBinding sceneBufferBinding = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 1);
+    const VkDescriptorSetLayoutBinding sceneBufferBinding = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 1);
 
     const VkDescriptorSetLayoutBinding bindings[] = { camBufferBinding, sceneBufferBinding };
 
@@ -1071,18 +1075,18 @@ void VulkanEngine::init_descriptors()
 
         VkDescriptorBufferInfo sceneBufferInfo;
 		sceneBufferInfo.buffer = _sceneParameterBuffer._buffer;
-		sceneBufferInfo.offset = pad_uniform_buffer_size(sizeof(GPUSceneData)) * i;
+		sceneBufferInfo.offset = 0; // we'll do the offset when binding the descriptor set
 		sceneBufferInfo.range = sizeof(GPUSceneData);
 
         VkWriteDescriptorSet cameraWrite = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, _frames[i].globalDescriptor, &cameraBufferInfo, 0);
 
-		VkWriteDescriptorSet sceneWrite = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, _frames[i].globalDescriptor, &sceneBufferInfo, 1);
+		VkWriteDescriptorSet sceneWrite = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, _frames[i].globalDescriptor, &sceneBufferInfo, 1);
 
 		VkWriteDescriptorSet setWrites[] = { cameraWrite,sceneWrite };
 
 		vkUpdateDescriptorSets(_device, 2, setWrites, 0, nullptr);
 
-        _mainDeletionQueue.push_function([&]() {
+        _mainDeletionQueue.push_function([=]() {
 			vmaDestroyBuffer(_allocator, _frames[i].cameraBuffer._buffer, _frames[i].cameraBuffer._allocation);
 		});
 	}
