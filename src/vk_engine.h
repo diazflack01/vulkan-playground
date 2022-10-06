@@ -14,6 +14,14 @@
 #include <vk_mesh.h>
 #include <glm/glm.hpp>
 
+struct GPUSceneData {
+	glm::vec4 fogColor; // w is for exponent
+	glm::vec4 fogDistances; //x for min, y for max, zw unused.
+	glm::vec4 ambientColor;
+	glm::vec4 sunlightDirection; //w for sun power
+	glm::vec4 sunlightColor;
+};
+
 struct GPUCameraData {
 	glm::mat4 view;
 	glm::mat4 proj;
@@ -178,6 +186,11 @@ public:
 	VkDescriptorSetLayout _globalSetLayout;
 	VkDescriptorPool _descriptorPool;
 
+	GPUSceneData _sceneParameters;
+	AllocatedBuffer _sceneParameterBuffer;
+
+	VkPhysicalDeviceProperties _gpuProperties;
+
 private:
 	void init_vulkan();
 
@@ -218,4 +231,6 @@ private:
 	AllocatedBuffer create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
 
 	void init_descriptors();
+
+	size_t pad_uniform_buffer_size(size_t originalSize);
 };
