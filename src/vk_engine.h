@@ -28,6 +28,10 @@ struct GPUCameraData {
 	glm::mat4 viewproj;
 };
 
+struct GPUObjectData{
+	glm::mat4 modelMatrix;
+};
+
 // Per frame context
 struct FrameData {
 	VkCommandPool commandPool;
@@ -39,8 +43,10 @@ struct FrameData {
 
 	//buffer that holds a single GPUCameraData to use when rendering
 	AllocatedBuffer cameraBuffer;
+	AllocatedBuffer objectBuffer;
 
 	VkDescriptorSet globalDescriptor;
+	VkDescriptorSet objectDescriptor;
 };
 
 struct Material {
@@ -184,6 +190,7 @@ public:
 	std::array<FrameData, FRAME_OVERLAP> _frames;
 
 	VkDescriptorSetLayout _globalSetLayout;
+	VkDescriptorSetLayout _objectSetLayout;
 	VkDescriptorPool _descriptorPool;
 
 	GPUSceneData _sceneParameters;
