@@ -50,5 +50,9 @@ VkDescriptorSetLayoutBinding descriptorset_layout_binding(VkDescriptorType type,
 
 VkWriteDescriptorSet write_descriptor_buffer(VkDescriptorType type, VkDescriptorSet dstSet, VkDescriptorBufferInfo* bufferInfo , uint32_t binding);
 
+VkDescriptorSetLayoutCreateInfo descriptorset_layout_create_info(const std::vector<VkDescriptorSetLayoutBinding>& bindings);
+
+VkDescriptorSetAllocateInfo descriptorset_allocate_info(VkDescriptorPool pool, const std::vector<VkDescriptorSetLayout>& descriptorSetLayout);
+
 }
 

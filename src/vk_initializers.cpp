@@ -284,3 +284,28 @@ VkWriteDescriptorSet vkinit::write_descriptor_buffer(VkDescriptorType type, VkDe
 
 	return write;
 }
+
+VkDescriptorSetLayoutCreateInfo vkinit::descriptorset_layout_create_info(const std::vector<VkDescriptorSetLayoutBinding> &bindings)
+{
+    VkDescriptorSetLayoutCreateInfo retVal = {};
+    retVal.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    retVal.pNext = nullptr;
+    retVal.bindingCount = static_cast<uint32_t>(bindings.size());
+    retVal.flags = 0;
+    retVal.pNext = nullptr;
+    retVal.pBindings = bindings.data();
+
+    return retVal;
+}
+
+VkDescriptorSetAllocateInfo vkinit::descriptorset_allocate_info(VkDescriptorPool pool, const std::vector<VkDescriptorSetLayout> &descriptorSetLayouts)
+{
+    VkDescriptorSetAllocateInfo retVal ={};
+    retVal.pNext = nullptr;
+    retVal.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    retVal.descriptorPool = pool;
+    retVal.descriptorSetCount = static_cast<uint32_t>(descriptorSetLayouts.size());
+    retVal.pSetLayouts = descriptorSetLayouts.data();
+
+    return retVal;
+}
