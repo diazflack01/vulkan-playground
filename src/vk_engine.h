@@ -7,6 +7,7 @@
 #include <functional>
 #include <deque>
 #include <unordered_map>
+#include <chrono>
 
 #include <vk_types.h>
 
@@ -113,6 +114,8 @@ public:
 
 	bool _isInitialized{ false };
 	size_t _frameNumber {0};
+    size_t _lastFrameNumberReported {0};
+    std::chrono::time_point<std::chrono::high_resolution_clock> _lastFpsReportTime{std::chrono::high_resolution_clock::now()};
 
 	VkExtent2D _windowExtent{ 1700 , 900 };
 
@@ -208,7 +211,7 @@ public:
 
     void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function);
 
-    bool use_gpu_only_memory_for_mesh_buffers = false;
+    bool use_gpu_only_memory_for_mesh_buffers = true;
 
 private:
 	void init_vulkan();

@@ -214,6 +214,17 @@ void VulkanEngine::run()
 		}
 
 		draw();
+
+        // FPS reporter
+        const auto timeNow = std::chrono::high_resolution_clock::now();
+        const auto timeDiff = timeNow - _lastFpsReportTime;
+        if (timeDiff > std::chrono::seconds{1}) {
+            const auto frameDiffCount = _frameNumber - _lastFrameNumberReported;
+            std::cout << "FPS: " << frameDiffCount << std::endl;
+
+            _lastFrameNumberReported = _frameNumber;
+            _lastFpsReportTime = timeNow;
+        }
     }
 }
 
@@ -313,7 +324,9 @@ void VulkanEngine::init_swapchain()
     vkb::Swapchain vkbSwapchain = swapchainBuilder
         .use_default_format_selection()
         //use vsync present mode
-        .set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)
+        // .set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)
+        // render as fast as machine can
+        .set_desired_present_mode(VK_PRESENT_MODE_IMMEDIATE_KHR)
         .set_desired_extent(_windowExtent.width, _windowExtent.height)
         .build()
         .value();
@@ -1047,7 +1060,8 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd,RenderObject* first, int cou
 		//we can now draw
 		vkCmdDraw(cmd, object.mesh->_vertices.size(), 1, 0, i);
 	}
-    std::cout << "Total Bind Count Pipeline: " << pipelineBindCount << " , Vertex Buffers:" << vertexBuffersBindCount << std::endl; 
+
+    // std::cout << "Total Bind Count Pipeline: " << pipelineBindCount << " , Vertex Buffers:" << vertexBuffersBindCount << std::endl;
 }
 
 void VulkanEngine::init_scene() {
