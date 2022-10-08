@@ -213,25 +213,6 @@ VkRenderPassBeginInfo vkinit::renderpass_begin_info(VkRenderPass renderPass, VkE
     return rpInfo;
 }
 
-VkSubmitInfo vkinit::submit_info(const VkCommandBuffer& commandBuffer, const VkSemaphore& waitSemaphore, const VkSemaphore& signalSemaphore, const VkPipelineStageFlags& waitStageFlags) {
-    VkSubmitInfo submit = {};
-    submit.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submit.pNext = nullptr;
-
-    submit.pWaitDstStageMask = &waitStageFlags;
-
-    submit.waitSemaphoreCount = 1;
-    submit.pWaitSemaphores = &waitSemaphore;
-
-    submit.signalSemaphoreCount = 1;
-    submit.pSignalSemaphores = &signalSemaphore;
-
-    submit.commandBufferCount = 1;
-    submit.pCommandBuffers = &commandBuffer;
-
-    return submit;
-}
-
 VkPresentInfoKHR vkinit::present_info(const VkSwapchainKHR& swapchain, const VkSemaphore& waitSemaphore, const uint32_t* imageIndices) {
     VkPresentInfoKHR presentInfo = {};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -308,4 +289,24 @@ VkDescriptorSetAllocateInfo vkinit::descriptorset_allocate_info(VkDescriptorPool
     retVal.pSetLayouts = descriptorSetLayouts.data();
 
     return retVal;
+}
+
+VkSubmitInfo vkinit::submit_info(const std::vector<VkCommandBuffer> &commandBuffers, const std::vector<VkSemaphore> &waitSemaphores, const std::vector<VkSemaphore> &signalSemaphores, const VkPipelineStageFlags *waitStageFlags)
+{
+    VkSubmitInfo submit = {};
+    submit.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit.pNext = nullptr;
+
+    submit.pWaitDstStageMask = waitStageFlags;
+
+    submit.waitSemaphoreCount = static_cast<uint32_t>(waitSemaphores.size());
+    submit.pWaitSemaphores = waitSemaphores.empty() ? 0 : waitSemaphores.data();
+
+    submit.signalSemaphoreCount = static_cast<uint32_t>(signalSemaphores.size());
+    submit.pSignalSemaphores = signalSemaphores.empty() ? 0: signalSemaphores.data();
+
+    submit.commandBufferCount = static_cast<uint32_t>(commandBuffers.size());
+    submit.pCommandBuffers = commandBuffers.empty() ? 0 : commandBuffers.data();
+
+    return submit;
 }

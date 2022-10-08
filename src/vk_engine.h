@@ -32,6 +32,12 @@ struct GPUObjectData{
 	glm::mat4 modelMatrix;
 };
 
+struct UploadContext {
+    VkFence _uploadFence;
+    VkCommandPool _commandPool;
+    VkCommandBuffer _commandBuffer;
+};
+
 // Per frame context
 struct FrameData {
 	VkCommandPool commandPool;
@@ -197,6 +203,10 @@ public:
 	AllocatedBuffer _sceneParameterBuffer;
 
 	VkPhysicalDeviceProperties _gpuProperties;
+
+    UploadContext _uploadContext;
+
+    void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function);
 
 private:
 	void init_vulkan();
