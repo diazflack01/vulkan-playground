@@ -8,6 +8,7 @@
 
 #include <vk_types.h>
 #include <vk_initializers.h>
+#include <vk_textures.h>
 
 // rotate, translate, perspective
 #include <glm/gtx/transform.hpp>
@@ -66,6 +67,8 @@ void VulkanEngine::init()
     init_descriptors();
 
     init_pipelines();
+
+    load_images();
 
     load_meshes();
 
@@ -1136,7 +1139,23 @@ AllocatedBuffer VulkanEngine::create_buffer(size_t allocSize, VkBufferUsageFlags
 		&newBuffer._allocation,
 		nullptr));
 
-	return newBuffer;
+    return newBuffer;
+}
+
+void VulkanEngine::load_images()
+{
+    Texture lostEmpire;
+
+    vkutil::load_image_from_file(*this, "../assets/lost_empire-RGBA.png", lostEmpire.image);
+
+    VkImageViewCreateInfo imageinfo = vkinit::imageview_create_info(VK_FORMAT_R8G8B8A8_SRGB, lostEmpire.image._image, VK_IMAGE_ASPECT_COLOR_BIT);
+    vkCreateImageView(_device, &imageinfo, nullptr, &lostEmpire.imageView);
+
+    _mainDeletionQueue.push_function([=]() {
+        vkDestroyImageView(_device, lostEmpire.imageView, nullptr);
+    });
+
+    _loadedTextures["empire_diffuse"] = lostEmpire;
 }
 
 void VulkanEngine::init_descriptors()

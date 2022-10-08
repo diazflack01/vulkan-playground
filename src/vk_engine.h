@@ -15,6 +15,11 @@
 #include <vk_mesh.h>
 #include <glm/glm.hpp>
 
+struct Texture {
+    AllocatedImage image;
+    VkImageView imageView;
+};
+
 struct GPUSceneData {
 	glm::vec4 fogColor; // w is for exponent
 	glm::vec4 fogDistances; //x for min, y for max, zw unused.
@@ -211,7 +216,11 @@ public:
 
     void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function);
 
-    bool use_gpu_only_memory_for_mesh_buffers = true;
+    AllocatedBuffer create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
+
+    std::unordered_map<std::string, Texture> _loadedTextures;
+
+    void load_images();
 
 private:
 	void init_vulkan();
@@ -250,9 +259,9 @@ private:
 
 	FrameData& get_current_frame();
 
-	AllocatedBuffer create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
-
 	void init_descriptors();
 
 	size_t pad_uniform_buffer_size(size_t originalSize);
+
+    bool use_gpu_only_memory_for_mesh_buffers = true;
 };
