@@ -121,6 +121,7 @@ public:
 	bool _isInitialized{ false };
 	size_t _frameNumber {0};
     size_t _lastFrameNumberReported {0};
+    size_t _lastFps{0};
     std::chrono::time_point<std::chrono::high_resolution_clock> _lastFpsReportTime{std::chrono::high_resolution_clock::now()};
 
 	VkExtent2D _windowExtent{ 1700 , 900 };

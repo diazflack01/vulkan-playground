@@ -236,14 +236,18 @@ void VulkanEngine::run()
         //imgui commands
         ImGui::ShowDemoWindow();
 
+        ImGui::Begin("Debug Window");
+        ImGui::Text((std::string("Frames per second: ") + std::to_string(_lastFps)).c_str());
+        ImGui::End();
+
 		draw();
 
         // FPS reporter
         const auto timeNow = std::chrono::high_resolution_clock::now();
         const auto timeDiff = timeNow - _lastFpsReportTime;
         if (timeDiff > std::chrono::seconds{1}) {
-            const auto frameDiffCount = _frameNumber - _lastFrameNumberReported;
-            std::cout << "FPS: " << frameDiffCount << std::endl;
+            _lastFps = _frameNumber - _lastFrameNumberReported;
+            std::cout << "FPS: " << _lastFps << std::endl;
 
             _lastFrameNumberReported = _frameNumber;
             _lastFpsReportTime = timeNow;
