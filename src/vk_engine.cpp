@@ -732,6 +732,18 @@ void VulkanEngine::init_pipelines()
 
     create_material(_meshPipeline, _meshPipelineLayout, "defaultmesh_duplicate");
 
+    // textured pipeline
+    pipelineBuilder._shaderStages.clear();
+    const VkShaderModule texturedLitFragShader = loadShader("textured_lit.frag.spv");
+    pipelineBuilder._shaderStages.push_back(
+        vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, triangleMeshVertexShader));
+
+    pipelineBuilder._shaderStages.push_back(
+        vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, texturedLitFragShader));
+
+    VkPipeline texPipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
+    create_material(texPipeline, _meshPipelineLayout, "texturedmesh");
+
     // delete vulkan shaders
     vkDestroyShaderModule(_device, triangleFragShader, nullptr);
     vkDestroyShaderModule(_device, triangleVertexShader, nullptr);
@@ -739,12 +751,14 @@ void VulkanEngine::init_pipelines()
     vkDestroyShaderModule(_device, coloredTriangleVertexShader, nullptr);
     vkDestroyShaderModule(_device, triangleMeshVertexShader, nullptr);
     vkDestroyShaderModule(_device, defaultLitFragShader, nullptr);
+    vkDestroyShaderModule(_device, texturedLitFragShader, nullptr);
 
     _mainDeletionQueue.push_function([=]() {
 		//destroy the 2 pipelines we have created
 		vkDestroyPipeline(_device, _coloredTrianglePipeline, nullptr);
         vkDestroyPipeline(_device, _trianglePipeline, nullptr);
         vkDestroyPipeline(_device, _meshPipeline, nullptr);
+        vkDestroyPipeline(_device, texPipeline, nullptr);
 
 		//destroy the pipeline layout that they use
 		vkDestroyPipelineLayout(_device, _trianglePipelineLayout, nullptr);
@@ -841,6 +855,12 @@ void VulkanEngine::load_meshes() {
     _meshes["wolf"] = _wolfMesh;
     _meshes["maleHuman"] = _maleHumanMesh;
 	_meshes["triangle"] = _triangleMesh;
+
+    // Lost empire
+    Mesh lostEmpire{};
+    lostEmpire.load_from_obj("../assets/lost_empire.obj");
+    upload_mesh(lostEmpire);
+    _meshes["empire"] = lostEmpire;
 }
 
 void VulkanEngine::upload_mesh(Mesh& mesh) {
@@ -1073,21 +1093,21 @@ void VulkanEngine::init_scene() {
 	monkey.material = get_material("defaultmesh");
 	monkey.transformMatrix = glm::mat4{ 1.0f };
 
-	_renderables.push_back(monkey);
+    _renderables.push_back(monkey);
 
     RenderObject wolf;
 	wolf.mesh = get_mesh("wolf");
 	wolf.material = get_material("defaultmesh");
 	wolf.transformMatrix = glm::translate(glm::scale(glm::mat4{ 1.0f }, glm::vec3{3.0f, 3.0f, 3.0f}), glm::vec3{-1.f, 3.0f, 0.0f});
 
-	_renderables.push_back(wolf);
+    _renderables.push_back(wolf);
 
     RenderObject maleHuman;
 	maleHuman.mesh = get_mesh("maleHuman");
 	maleHuman.material = get_material("defaultmesh");
 	maleHuman.transformMatrix = glm::translate(glm::scale(glm::mat4{ 1.0f }, glm::vec3{0.3f, 0.3f, 0.3f}), glm::vec3{10.f, 3.0f, 0.0f});
 
-	_renderables.push_back(maleHuman);
+    _renderables.push_back(maleHuman);
 
 	for (int x = -20; x <= 20; x++) {
 		for (int y = -20; y <= 20; y++) {
@@ -1095,13 +1115,20 @@ void VulkanEngine::init_scene() {
 			RenderObject tri;
 			tri.mesh = get_mesh("triangle");
 			tri.material = get_material(y%2 == 0 ? "defaultmesh_duplicate" : "defaultmesh");
-			glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(x, 0, y));
+            glm::mat4 translation = glm::translate(glm::mat4{ 1.0 }, glm::vec3(x, 0, y));
 			glm::mat4 scale = glm::scale(glm::mat4{ 1.0 }, glm::vec3(0.2, 0.2, 0.2));
 			tri.transformMatrix = translation * scale;
 
-			_renderables.push_back(tri);
+            _renderables.push_back(tri);
 		}
 	}
+
+    RenderObject map;
+    map.mesh = get_mesh("empire");
+    map.material = get_material("texturedmesh");
+    map.transformMatrix = glm::translate(glm::vec3{ 5,-10,0 });
+
+    _renderables.push_back(map);
 
     auto sortComparator = [](const RenderObject& l, const RenderObject& r){
         if (l.material == r.material) {
