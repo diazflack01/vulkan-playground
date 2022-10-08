@@ -241,6 +241,8 @@ private:
 
     void init_pipelines();
 
+    void init_imgui();
+
 	void load_meshes();
 
 	void upload_mesh(Mesh& mesh);
