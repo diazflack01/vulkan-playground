@@ -829,65 +829,95 @@ void VulkanEngine::load_meshes() {
 
 void VulkanEngine::upload_mesh(Mesh& mesh) {
     const size_t bufferSize = mesh._vertices.size() * sizeof(Vertex);
-    //allocate staging buffer
-    VkBufferCreateInfo stagingBufferInfo = {};
-    stagingBufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    stagingBufferInfo.pNext = nullptr;
 
-    stagingBufferInfo.size = bufferSize;
-    stagingBufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    if (use_gpu_only_memory_for_mesh_buffers) {
+        //allocate staging buffer
+        VkBufferCreateInfo stagingBufferInfo = {};
+        stagingBufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        stagingBufferInfo.pNext = nullptr;
 
-    //let the VMA library know that this data should be on CPU RAM
-    VmaAllocationCreateInfo vmaallocInfo = {};
-    vmaallocInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
+        stagingBufferInfo.size = bufferSize;
+        stagingBufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 
-    AllocatedBuffer stagingBuffer;
+        //let the VMA library know that this data should be on CPU RAM
+        VmaAllocationCreateInfo vmaallocInfo = {};
+        vmaallocInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
 
-    //allocate the buffer
-    VK_CHECK(vmaCreateBuffer(_allocator, &stagingBufferInfo, &vmaallocInfo,
-        &stagingBuffer._buffer,
-        &stagingBuffer._allocation,
-        nullptr));
+        AllocatedBuffer stagingBuffer;
 
-    //copy vertex data
-    void* data;
-    vmaMapMemory(_allocator, stagingBuffer._allocation, &data);
+        //allocate the buffer
+        VK_CHECK(vmaCreateBuffer(_allocator, &stagingBufferInfo, &vmaallocInfo,
+            &stagingBuffer._buffer,
+            &stagingBuffer._allocation,
+            nullptr));
 
-    memcpy(data, mesh._vertices.data(), bufferSize);
+        //copy vertex data
+        void* data;
+        vmaMapMemory(_allocator, stagingBuffer._allocation, &data);
 
-    vmaUnmapMemory(_allocator, stagingBuffer._allocation);
+        memcpy(data, mesh._vertices.data(), bufferSize);
 
-    //allocate vertex buffer
-    VkBufferCreateInfo vertexBufferInfo = {};
-    vertexBufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    vertexBufferInfo.size = bufferSize;
-    //this buffer is going to be used as a Vertex Buffer
-    vertexBufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+        vmaUnmapMemory(_allocator, stagingBuffer._allocation);
 
-    // reuse the vmaAllocInfo but with different type
-    vmaallocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+        //allocate vertex buffer
+        VkBufferCreateInfo vertexBufferInfo = {};
+        vertexBufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        vertexBufferInfo.size = bufferSize;
+        //this buffer is going to be used as a Vertex Buffer
+        vertexBufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
-    //allocate the buffer
-    VK_CHECK(vmaCreateBuffer(_allocator, &vertexBufferInfo, &vmaallocInfo,
-        &mesh._vertexBuffer._buffer,
-        &mesh._vertexBuffer._allocation,
-        nullptr));
+        // reuse the vmaAllocInfo but with different type
+        vmaallocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 
-    immediate_submit([=](VkCommandBuffer cmd){
-        VkBufferCopy copy;
-        copy.dstOffset = 0;
-        copy.srcOffset = 0;
-        copy.size = bufferSize;
-        vkCmdCopyBuffer(cmd, stagingBuffer._buffer, mesh._vertexBuffer._buffer, 1, &copy);
-    });
+        //allocate the buffer
+        VK_CHECK(vmaCreateBuffer(_allocator, &vertexBufferInfo, &vmaallocInfo,
+            &mesh._vertexBuffer._buffer,
+            &mesh._vertexBuffer._allocation,
+            nullptr));
 
-    // add the destruction of triangle mesh buffer to the deletion queue
-    _mainDeletionQueue.push_function([=]() {
-        vmaDestroyBuffer(_allocator, mesh._vertexBuffer._buffer, mesh._vertexBuffer._allocation);
-    });
+        immediate_submit([=](VkCommandBuffer cmd){
+            VkBufferCopy copy;
+            copy.dstOffset = 0;
+            copy.srcOffset = 0;
+            copy.size = bufferSize;
+            vkCmdCopyBuffer(cmd, stagingBuffer._buffer, mesh._vertexBuffer._buffer, 1, &copy);
+        });
 
-    // immdiately delete staging buffer
-    vmaDestroyBuffer(_allocator, stagingBuffer._buffer, stagingBuffer._allocation);
+        // add the destruction of triangle mesh buffer to the deletion queue
+        _mainDeletionQueue.push_function([=]() {
+            vmaDestroyBuffer(_allocator, mesh._vertexBuffer._buffer, mesh._vertexBuffer._allocation);
+        });
+
+        // immdiately delete staging buffer
+        vmaDestroyBuffer(_allocator, stagingBuffer._buffer, stagingBuffer._allocation);
+    } else {
+        VkBufferCreateInfo vertexBufferInfo = {};
+        vertexBufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        vertexBufferInfo.size = bufferSize;
+        vertexBufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+
+        VmaAllocationCreateInfo vmaallocInfo = {};
+        vmaallocInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+
+        //allocate the buffer
+        VK_CHECK(vmaCreateBuffer(_allocator, &vertexBufferInfo, &vmaallocInfo,
+            &mesh._vertexBuffer._buffer,
+            &mesh._vertexBuffer._allocation,
+            nullptr));
+
+        //copy vertex data
+        void* data;
+        vmaMapMemory(_allocator, mesh._vertexBuffer._allocation, &data);
+
+        memcpy(data, mesh._vertices.data(), bufferSize);
+
+        vmaUnmapMemory(_allocator, mesh._vertexBuffer._allocation);
+
+        // add the destruction of triangle mesh buffer to the deletion queue
+        _mainDeletionQueue.push_function([=]() {
+            vmaDestroyBuffer(_allocator, mesh._vertexBuffer._buffer, mesh._vertexBuffer._allocation);
+        });
+    }
 }
 
 Material* VulkanEngine::create_material(VkPipeline pipeline, VkPipelineLayout layout, const std::string& name)

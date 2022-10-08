@@ -208,6 +208,8 @@ public:
 
     void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function);
 
+    bool use_gpu_only_memory_for_mesh_buffers = false;
+
 private:
 	void init_vulkan();
 
