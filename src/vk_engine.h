@@ -62,6 +62,7 @@ struct FrameData {
 };
 
 struct Material {
+    VkDescriptorSet textureSet{VK_NULL_HANDLE}; //texture defaulted to null
 	VkPipeline pipeline;
 	VkPipelineLayout pipelineLayout;
 };
@@ -205,6 +206,7 @@ public:
 
 	VkDescriptorSetLayout _globalSetLayout;
 	VkDescriptorSetLayout _objectSetLayout;
+    VkDescriptorSetLayout _singleTextureSetLayout;
 	VkDescriptorPool _descriptorPool;
 
 	GPUSceneData _sceneParameters;

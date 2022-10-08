@@ -733,6 +733,14 @@ void VulkanEngine::init_pipelines()
     create_material(_meshPipeline, _meshPipelineLayout, "defaultmesh_duplicate");
 
     // textured pipeline
+    VkPipelineLayoutCreateInfo textured_pipeline_layout_info = mesh_pipeline_layout_info;
+    const std::vector<VkDescriptorSetLayout> descriptorSetLayouts = { _globalSetLayout, _objectSetLayout, _singleTextureSetLayout };
+    textured_pipeline_layout_info.setLayoutCount = static_cast<uint32_t>(descriptorSetLayouts.size());
+    textured_pipeline_layout_info.pSetLayouts = descriptorSetLayouts.data();
+
+    VkPipelineLayout texturedPipeLayout;
+    VK_CHECK(vkCreatePipelineLayout(_device, &textured_pipeline_layout_info, nullptr, &texturedPipeLayout));
+
     pipelineBuilder._shaderStages.clear();
     const VkShaderModule texturedLitFragShader = loadShader("textured_lit.frag.spv");
     pipelineBuilder._shaderStages.push_back(
@@ -741,8 +749,9 @@ void VulkanEngine::init_pipelines()
     pipelineBuilder._shaderStages.push_back(
         vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, texturedLitFragShader));
 
+    pipelineBuilder._pipelineLayout = texturedPipeLayout;
     VkPipeline texPipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
-    create_material(texPipeline, _meshPipelineLayout, "texturedmesh");
+    create_material(texPipeline, texturedPipeLayout, "texturedmesh");
 
     // delete vulkan shaders
     vkDestroyShaderModule(_device, triangleFragShader, nullptr);
@@ -763,6 +772,7 @@ void VulkanEngine::init_pipelines()
 		//destroy the pipeline layout that they use
 		vkDestroyPipelineLayout(_device, _trianglePipelineLayout, nullptr);
         vkDestroyPipelineLayout(_device, _meshPipelineLayout, nullptr);
+        vkDestroyPipelineLayout(_device, texturedPipeLayout, nullptr);
     });
 }
 
@@ -1064,6 +1074,10 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd,RenderObject* first, int cou
         	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 0, 1, &get_current_frame().globalDescriptor, 1, &uniform_offset);
 
             vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 1, 1, &get_current_frame().objectDescriptor, 0, nullptr);
+
+            if (object.material->textureSet != VK_NULL_HANDLE) {
+                vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipelineLayout, 2, 1, &object.material->textureSet, 0, nullptr);
+            }
 		}
 
 		MeshPushConstants constants;
@@ -1122,6 +1136,36 @@ void VulkanEngine::init_scene() {
             _renderables.push_back(tri);
 		}
 	}
+
+    VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST);
+
+    VkSampler blockySampler;
+    vkCreateSampler(_device, &samplerInfo, nullptr, &blockySampler);
+    _mainDeletionQueue.push_function([=]{
+        vkDestroySampler(_device, blockySampler, nullptr);
+    });
+
+    Material* texturedMat =	get_material("texturedmesh");
+
+    //allocate the descriptor set for single-texture to use on the material
+    VkDescriptorSetAllocateInfo allocInfo = {};
+    allocInfo.pNext = nullptr;
+    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    allocInfo.descriptorPool = _descriptorPool;
+    allocInfo.descriptorSetCount = 1;
+    allocInfo.pSetLayouts = &_singleTextureSetLayout;
+
+    vkAllocateDescriptorSets(_device, &allocInfo, &texturedMat->textureSet);
+
+    //write to the descriptor set so that it points to our empire_diffuse texture
+    VkDescriptorImageInfo imageBufferInfo;
+    imageBufferInfo.sampler = blockySampler;
+    imageBufferInfo.imageView = _loadedTextures["empire_diffuse"].imageView;
+    imageBufferInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+    VkWriteDescriptorSet texture1 = vkinit::write_descriptor_image(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, texturedMat->textureSet, &imageBufferInfo, 0);
+
+    vkUpdateDescriptorSets(_device, 1, &texture1, 0, nullptr);
 
     RenderObject map;
     map.mesh = get_mesh("empire");
@@ -1192,7 +1236,9 @@ void VulkanEngine::init_descriptors()
 	{
 		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10 },
         { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 10 },
-		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 10 }
+        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 10 },
+        //add combined-image-sampler descriptor types to the pool
+        { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 10 }
 	};
 
     VkDescriptorPoolCreateInfo pool_info = {};
@@ -1204,7 +1250,7 @@ void VulkanEngine::init_descriptors()
 
 	vkCreateDescriptorPool(_device, &pool_info, nullptr, &_descriptorPool);
 
-    /*** DescriptorSetLayout 0 ***/
+    /*** DescriptorSetLayout 0 - Camera, Scene Buffer ***/
 	const VkDescriptorSetLayoutBinding camBufferBinding = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0);
     const VkDescriptorSetLayoutBinding sceneBufferBinding = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 1);
 
@@ -1214,7 +1260,7 @@ void VulkanEngine::init_descriptors()
 
 	vkCreateDescriptorSetLayout(_device, &set1info, nullptr, &_globalSetLayout);
 
-    /*** DescriptorSetLayout 1 ***/
+    /*** DescriptorSetLayout 1 - Storage Buffer ***/
     const VkDescriptorSetLayoutBinding objectBind = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0);
 
     const std::vector<VkDescriptorSetLayoutBinding> descriptor1Bindings = {objectBind};
@@ -1223,10 +1269,19 @@ void VulkanEngine::init_descriptors()
 
 	vkCreateDescriptorSetLayout(_device, &set2info, nullptr, &_objectSetLayout);
 
+    /*** DescriptorSetLayout 2 - Texture ***/
+    VkDescriptorSetLayoutBinding textureBind = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0);
+
+    const std::vector<VkDescriptorSetLayoutBinding> descriptor2Bindings = {textureBind};
+    const VkDescriptorSetLayoutCreateInfo set3info = vkinit::descriptorset_layout_create_info(descriptor2Bindings);
+
+    vkCreateDescriptorSetLayout(_device, &set3info, nullptr, &_singleTextureSetLayout);
+
 	// add descriptor set layout to deletion queues
 	_mainDeletionQueue.push_function([&]() {
 		vkDestroyDescriptorSetLayout(_device, _globalSetLayout, nullptr);
         vkDestroyDescriptorSetLayout(_device, _objectSetLayout, nullptr);
+        vkDestroyDescriptorSetLayout(_device, _singleTextureSetLayout, nullptr);
         vkDestroyDescriptorPool(_device, _descriptorPool, nullptr);
 	});
 

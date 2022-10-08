@@ -54,5 +54,9 @@ VkDescriptorSetLayoutCreateInfo descriptorset_layout_create_info(const std::vect
 
 VkDescriptorSetAllocateInfo descriptorset_allocate_info(VkDescriptorPool pool, const std::vector<VkDescriptorSetLayout>& descriptorSetLayout);
 
+VkSamplerCreateInfo sampler_create_info(VkFilter filters, VkSamplerAddressMode samplerAddressMode = VK_SAMPLER_ADDRESS_MODE_REPEAT);
+
+VkWriteDescriptorSet write_descriptor_image(VkDescriptorType type, VkDescriptorSet dstSet, VkDescriptorImageInfo* imageInfo, uint32_t binding);
+
 }
 
